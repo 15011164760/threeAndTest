@@ -92,6 +92,17 @@ camera.position.z = 5;
 // 初始化渲染器
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth-25, window.innerHeight-100);
+// /设置初始大小
+function updateRendererSize() {
+  console.log(' ===', )
+    renderer.setSize(window.innerWidth - 25, window.innerHeight - 100);
+}
+ 
+// 初始化时设置渲染器大小
+updateRendererSize();
+ 
+// 监听窗口大小变化事件
+window.addEventListener('resize', updateRendererSize, false);
 let threeId=document.getElementById('threeId');
 threeId.appendChild(renderer.domElement);
 
@@ -188,6 +199,69 @@ scene.background = new THREE.Color(0x000000);
 const gridHelper = new THREE.GridHelper(10, 10);
 scene.add(gridHelper);
 
+// 触摸交互变量
+let touchStartX = 0;
+let touchStartY = 0;
+let isTouching = false;
+
+// 触摸开始事件
+document.addEventListener('touchstart', (event) => {
+  isTouching = true;
+  touchStartX = event.touches[0].clientX;
+  touchStartY = event.touches[0].clientY;
+});
+
+// 触摸结束事件
+document.addEventListener('touchend', () => {
+  isTouching = false;
+});
+
+// 触摸移动事件
+document.addEventListener('touchmove', (event) => {
+  if (isTouching) {
+    const touchMoveX = event.touches[0].clientX - touchStartX;
+    const touchMoveY = event.touches[0].clientY - touchStartY;
+
+    const deltaRotationQuaternion = new THREE.Quaternion()
+      .setFromEuler(
+        new THREE.Euler(
+          toRadians(touchMoveY * 0.5),
+          toRadians(touchMoveX * 0.5),
+          0,
+          'XYZ'
+        )
+      );
+
+    box.quaternion.multiplyQuaternions(deltaRotationQuaternion, box.quaternion);
+
+    touchStartX = event.touches[0].clientX;
+    touchStartY = event.touches[0].clientY;
+  }
+});
+let initialDistance = 0;
+
+document.addEventListener('touchstart', (event) => {
+  if (event.touches.length === 2) {
+    initialDistance = Math.hypot(
+      event.touches[0].clientX - event.touches[1].clientX,
+      event.touches[0].clientY - event.touches[1].clientY
+    );
+  }
+});
+
+document.addEventListener('touchmove', (event) => {
+  if (event.touches.length === 2) {
+    const currentDistance = Math.hypot(
+      event.touches[0].clientX - event.touches[1].clientX,
+      event.touches[0].clientY - event.touches[1].clientY
+    );
+
+    const scale = currentDistance / initialDistance;
+    camera.position.z *= 1 / scale;
+
+    initialDistance = currentDistance;
+  }
+});
 // 渲染循环
 function animate() {
   requestAnimationFrame(animate);
