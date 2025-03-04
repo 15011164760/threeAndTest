@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vue</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.7.16/dist/vue.js"></script>
+    <!-- 引入样式 -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- 引入组件库 -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.134.0/build/three.min.js"></script>
+</head>
+
+<body>
+    <div id="app">
+        <p>第一题：使用 Vue 框架实现一个输入搜索框，需要实现一边输入一边显示搜索结果的效果,需要有网络时候可看效果</p>
+        <el-select @change="changeValFn" v-model="value"  filterable remote reserve-keyword placeholder="请输入关键词"
+            :remote-method="remoteMethod" :loading="loading">
+            <el-option v-for="item in options" :key="item.node_id" :label="item.login" :value="item.node_id">
+            </el-option>
+        </el-select>
+        <hr>
+    </div>
+   <div>第二题：3D 部分试题</div>
+   <div id="threeId"></div>
+    <script>
+        let vm = new Vue({
+            el: '#app',
+            data() {
+                return {
+                    options: [],
+                    value: '',
+                    loading: false,
+                }
+            },
+            methods: {
+                changeValFn(val) {
+                    console.log(val);
+                    //请求的网址
+                    var url = 'https://api.github.com/search/users?q=' + val;
+                    //发起get请求
+                    var promise = fetch(url).then((response)=> {
+
+                        //response.status表示响应的http状态码
+                        if (response.status === 200) {
+                            //json是返回的response提供的一个方法,会把返回的json字符串反序列化成对象,也被包装成一个Promise了
+                            return response.json();
+                        } else {
+                            return {}
+                        }
+                    });
+
+                    promise = promise.then((data)=> {
+                        //响应的内容
+                        console.log(data,"==",data.items);
+                        this.options=data.items;
+                    }).catch(function (err) {
+                        console.log(err);
+                    })
+                },
+                remoteMethod(query) {
+                    if (query !== '') {
+                        this.loading = true;
+                        setTimeout(() => {
+                            this.loading = false;
+                            this.changeValFn(query);
+                        }, 200);
+                    } else {
+                        // this.options = [];
+                    }
+                }
+            }
+        })
+
+
+
+    </script>
+</body>
+
+</html>
+  <script>
+
+// 初始化场景
+const scene = new THREE.Scene();
+
+// 初始化相机
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
+camera.position.z = 5;
+
+// 初始化渲染器
+const renderer = new THREE.WebGLRenderer();
+renderer.setSize(window.innerWidth-25, window.innerHeight-100);
+let threeId=document.getElementById('threeId');
+threeId.appendChild(renderer.domElement);
+
+// 创建 BOX 的几何体
+const geometry = new THREE.BufferGeometry();
+const vertices = new Float32Array([
+  // 前面
+  -0.5, -0.5,  0.5,  0.5, -0.5,  0.5,
+   0.5,  0.5,  0.5, -0.5,  0.5,  0.5,
+  // 后面
+  -0.5, -0.5, -0.5,  0.5, -0.5, -0.5,
+   0.5,  0.5, -0.5, -0.5,  0.5, -0.5,
+  // 连接前面和后面
+  -0.5, -0.5,  0.5, -0.5, -0.5, -0.5,
+   0.5, -0.5,  0.5,  0.5, -0.5, -0.5,
+   0.5,  0.5,  0.5,  0.5,  0.5, -0.5,
+  -0.5,  0.5,  0.5, -0.5,  0.5, -0.5,
+]);
+geometry.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+
+// 创建材质
+const material = new THREE.LineBasicMaterial({ color: 0x00ff00 });
+
+// 创建网格
+const box = new THREE.LineSegments(geometry, material);
+scene.add(box);
+
+// 平移 BOX
+box.position.set(2, 1, 0);
+
+// 鼠标交互变量
+let isDragging = false;
+let previousMousePosition = {
+  x: 0,
+  y: 0,
+};
+
+// 鼠标按下事件
+document.addEventListener('mousedown', (event) => {
+  isDragging = true;
+});
+
+// 鼠标松开事件
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+});
+
+// 鼠标移动事件
+document.addEventListener('mousemove', (event) => {
+  if (isDragging) {
+    const deltaMove = {
+      x: event.offsetX - previousMousePosition.x,
+      y: event.offsetY - previousMousePosition.y,
+    };
+
+    const deltaRotationQuaternion = new THREE.Quaternion()
+      .setFromEuler(
+        new THREE.Euler(
+          toRadians(deltaMove.y * 1),
+          toRadians(deltaMove.x * 1),
+          0,
+          'XYZ'
+        )
+      );
+
+    box.quaternion.multiplyQuaternions(deltaRotationQuaternion, box.quaternion);
+  }
+
+  previousMousePosition = {
+    x: event.offsetX,
+    y: event.offsetY,
+  };
+});
+
+// 鼠标滚轮事件
+document.addEventListener('wheel', (event) => {
+  camera.position.z += event.deltaY * 0.01;
+});
+
+// 角度转弧度
+function toRadians(angle) {
+  return angle * (Math.PI / 180);
+}
+
+// 添加灯光
+const light = new THREE.DirectionalLight(0xffffff, 1);
+light.position.set(1, 1, 1).normalize();
+scene.add(light);
+
+// 添加背景色
+scene.background = new THREE.Color(0x000000);
+
+// 添加网格辅助线
+const gridHelper = new THREE.GridHelper(10, 10);
+scene.add(gridHelper);
+
+// 渲染循环
+function animate() {
+  requestAnimationFrame(animate);
+  renderer.render(scene, camera);
+}
+animate();
+  </script>
